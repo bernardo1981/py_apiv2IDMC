@@ -1,0 +1,52 @@
+import requests
+
+# Datos para el login
+login_url = 'https://dm-us.informaticacloud.com/ma/api/v2/user/login'
+login_data = {
+    "username": "usuario",
+    "password": "Password"
+}
+headers = {'Content-Type': 'application/json'}
+
+# Realizar el login y obtener el icSessionId y serverUrl
+response = requests.post(login_url, json=login_data, headers=headers)
+login_response = response.json()
+
+icSessionId = login_response.get('icSessionId')
+serverUrl = login_response.get('serverUrl')
+
+print(f"icSessionId: {icSessionId}")
+print(f"serverUrl: {serverUrl}")
+
+# Obtener la lista de DRS
+drs_url = f'https://usw5.dm-us.informaticacloud.com/saas/api/v2/task?type=DRS'
+drs_headers = {
+    'icSessionId': icSessionId,
+    'Cookie': 'JSESSIONID=DAB24990C62325C79B350D7876677341; SERVERID_SAAS=IICS-saas_k8s_0; SERVERID_SAAS_K8S="6dffd3009980f328"'
+}
+
+response = requests.get(drs_url, headers=drs_headers)
+drs_response = response.json()
+
+# Obtener los IDs de DRS
+drs_ids = [task['id'] for task in drs_response.get('tasks', [])]
+for i, drs_id in enumerate(drs_ids, start=1):
+    print(f"{i}. {drs_id}")
+
+# Preguntar al usuario qué DRS quiere matar
+taksid = input("¿Qué taskId quiere matar? (escribe el número): ")
+selected_task_id = drs_ids[int(taksid) - 1]
+
+# Detener el DRS seleccionado
+stop_job_url = f'https://usw5.dm-us.informaticacloud.com/saas/api/v2/job/stop'
+stop_job_data = {
+    "@type": "job",
+    "taskId": selected_task_id,
+    "taskType": "DRS"
+}
+
+response = requests.post(stop_job_url, json=stop_job_data, headers={**drs_headers, 'Content-Type': 'application/json'})
+stop_job_response = response.json()
+
+# Imprimir la salida
+print("Resultado de detener el DRS:", stop_job_response)
